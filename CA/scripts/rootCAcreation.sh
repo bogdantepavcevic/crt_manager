@@ -31,9 +31,9 @@ echo 1000 > "$dir"/serial
 
 echo -e "\nEnter the path to OpenSSL configuration file for the root CA. This file defines"
 echo "the structure and extensions of the certificates being created and is used when"
-echo "generating new certificates and certificate signing requests (csr).You can use"
+echo "generating new certificates and certificate signing requests (csr). You can use"
 echo "the provided file in the root directory of crt_manager tool on the GitHub"
-read -p "(openssl-rootCA.cnf, this is adopt for root CA) or specify path for new file: " opn
+read -p "(openssl-rootCA.cnf, this is adopt for the Root CA) or specify path for new file: " opn
 if [ ! -n "$opn" ]
 then
 	cp "$current_dir"/../config/openssl-rootCA.cnf "$dir"/
@@ -75,11 +75,16 @@ then
 	then
 		if [  -n "$t" ]
 		then
-			openssl genrsa -out "$dir"/private/"$pk" 4096
-			chmod 400 "$dir"/private/"$pk"
-			openssl req -config "$dir"/openssl-rootCA.cnf -key "$dir"/private/"$pk" -new -x509 -days $t -sha256 -extensions v3_ca -out "$dir"/certs/"$cert"
-			echo "Root private key and certificated are created."
-			chmod 444 "$dir"/certs/"$cert"
+			if [[ $t -gt 0 ]]
+			then
+				openssl genrsa -out "$dir"/private/"$pk" 4096
+				chmod 400 "$dir"/private/"$pk"
+				openssl req -config "$dir"/openssl-rootCA.cnf -key "$dir"/private/"$pk" -new -x509 -days $t -sha256 -extensions v3_ca -out "$dir"/certs/"$cert"
+				echo "Root private key and certificated are created."
+				chmod 444 "$dir"/certs/"$cert"
+			else
+				echo -e "\e[31mERROR\e[0m: Certificate validity period must be positve number!"
+			fi
 		fi
 	fi
 fi

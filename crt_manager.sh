@@ -11,7 +11,7 @@ figlet -f big CRT MANAGER
 cat << EOF
 
 This is bash toolkit for managing SSL/TLS certificates. It is designed for cybersecurity engineers,
-system administrators,  DevOps teams, and anyone managing certificate infrastructure or PKI operations.
+system administrators, DevOps teams, and anyone managing certificate infrastructure or PKI operations.
 
 USAGE:
 	./crt_manager.sh [options]
@@ -19,13 +19,13 @@ USAGE:
 OPTIONS:
 	-h				Help
 	-p				Generate the private key
-	-C				Generate csr"
-	-c				Issue a certificate, signing of csr"
-	-v				Verify csr, certificate, private ke"
-	-x				Change certificate's format"
-	-r				Revoke certificate"
-	-F				Fetch certificate"
-	-m				Check the private key and certificate match"
+	-C				Generate csr
+	-c				Issue a certificate, signing of csr
+	-v				Verify csr, certificate, private key
+	-x				Change format of the certificate
+	-r				Revoke certificate
+	-F				Fetch certificate
+	-m				Check the private key and certificate match
 
 
 EXAMPLE:
@@ -41,18 +41,24 @@ EOF
 generate_PK()
 {
 	read -p "Enter the destination path for storing the private key: " pk
-    while [[ 1 ]]
-	do
-		read -p "Enter the size of the private key [2048, 4096]: " bit
-        	if [[ $bit -eq 2048 || $bit -eq 4096 ]]
-		then
-			openssl genrsa -out $pk $bit
-			break
-		else
-			echo -e "\e[31mERROR:\e[0m Private key must be 2048 or 4096 bits! "
-			exit 21
-		fi
-	done
+	if [ -n "$pk" ]
+	then
+		while [[ 1 ]]
+		do
+			read -p "Enter the size of the private key [2048, 4096]: " bit
+        		if [[ $bit -eq 2048 || $bit -eq 4096 ]]
+			then
+				openssl genrsa -out $pk $bit 2>/dev/null
+				break
+			else
+				echo -e "\e[31mERROR:\e[0m Private key must be 2048 or 4096 bits! "
+				exit 22
+			fi
+		done
+	else
+		echo -e "\e[31mERROR\e[0m: The name of private key can't be empty string!"
+		exit 21
+	fi
 }
 
 generate_CSR()
@@ -65,8 +71,14 @@ generate_CSR()
         	if test -f "$pk"
 		then
 			read -p "Enter the destination path for storing the csr : " csr
-			openssl req -config $conf -new -sha256 -key $pk -out $csr
-		else 
+			if [ -n "$csr"]
+			then
+				openssl req -config $conf -new -sha256 -key $pk -out $csr | 2>/dev/null
+			else
+		                echo -e "\e[31mERROR\e[0m: The name of csr can't be empty string!"
+                		exit 33
+			fi
+		else
 			echo -e "\e[31mERROR:\e[0m Private key doesn't exist on specified path!"
 			exit  32
 		fi
@@ -113,9 +125,11 @@ create_CERT()
 
 verify()
 {
-	read -p "Verify by selecting one of the following options in  brackets csr(c)/sertifikat(s)/privatni kljuc(p)/pfx sertifikat(f): " opt
+	echo -e "\nVerify by selecting one of the following options in  brackets:"
+	echo -e " (s)   csr \n (c)   certificate \n (p)   private key \n (f)   pfx certificate"
+	read -p "Select option: " opt
 	case $opt in
-		c)	# Verify csr
+		s)	# Verify csr
 			read -p "Provide the path to the csr: " csr
 			if test -f $csr
 			then
@@ -124,7 +138,7 @@ verify()
 				echo -e "\e[31mERROR:\e[0m Csr doesn't exist on specified path!"
 			fi
 			;;
-		s)	# Verify certificate
+		c)	# Verify certificate
 			read -p "Provide the path to the certificate: " crt
 			if test -f $crt
 			then
@@ -160,7 +174,7 @@ verify()
 
 convert()
 {
-	echo "Enter the option for convert the certificate:"
+	echo -e "\nEnter the option for convert the certificate:"
 	echo -e "  DER			-> 	PEM		(1)"
 	echo -e "  PEM			-> 	DER		(2)"
 	echo -e "  PKCS#12 (.pfx) 	->	PEM		(3)"
