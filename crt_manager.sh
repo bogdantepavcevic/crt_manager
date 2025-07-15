@@ -21,7 +21,7 @@ OPTIONS:
 	-p				Generate the private key
 	-C				Generate csr
 	-c				Issue a certificate, signing of csr
-	-v				Verify csr, certificate, private key
+	-v				Verify csr, certificate, private key, pfx certificate
 	-x				Change format of the certificate
 	-r				Revoke certificate
 	-F				Fetch certificate
@@ -190,10 +190,10 @@ convert()
 			exit 61
 		fi
 	done
-	case $num in 
+	case $num in
 		1)	# DER -> PEM
 			read -p "Provide the path in DER format: " cert
-			if test -f $cert 
+			if test -f $cert
 			then
 				if [[ $cert==*.der ]]
 				then
@@ -236,8 +236,14 @@ revoke()
 fetch()
 {
 	read -p "Enter the path and file name  where certificate will be stored: " cert
-	openssl s_client -showcerts -connect $OPTARG 2>/dev/null 1>$cert </dev/null
-	cat $cert | openssl x509 -text -noout
+	if [ ! -n "$cert" ]
+	then
+		c="$(pwd)"/"$(echo "$OPTARG" | cut -f 1 -d ":").pem"
+		openssl s_client -showcerts -connect $OPTARG 2>/dev/null </dev/null | openssl x509 -text | sed -ne '/BEGIN\ CERTIFICATE/,/END\ CERTIFICATE/p' > $c
+	else
+		openssl s_client -showcerts -connect $OPTARG 2>/dev/null 1>$cert </dev/null
+              	cat "$cert" | openssl x509 -text | sed -ne '/BEGIN\ CERTIFICATE/,/END\ CERTIFICATE/p' > $cert
+	fi
 }
 
 check()
