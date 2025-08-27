@@ -1,12 +1,12 @@
 #! /bin/bash
 
 current_dir=$(pwd)
-echo "Check if openssl is installed:"
+
 
 dpkg -s openssl &> /dev/null
 if [ $? == 0 ]
 then
-        echo -e "\e[32mOK\e[0m: openssl is install"; 
+        echo -e "\n\e[32mOK\e[0m: openssl is install"; 
 else
         echo -e "\e[31mERROR\e[0m: openssl isn't installed. Install openssl and try again."
         exit 10

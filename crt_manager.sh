@@ -1,4 +1,4 @@
-#! /bin/bash 
+#! /bin/bash
 
 
 ##########################################
@@ -20,22 +20,25 @@ OPTIONS:
 	-h				Help
 	-p				Generate the private key
 	-C				Generate csr
-	-c				Issue a certificate, signing of csr
-	-v				Verify csr, certificate, private key, pfx certificate
+	-c				Issue a certificate (signing of csr)
+	-v				Verify csr, private key, pem, pfx or der certificate
 	-x				Change format of the certificate
 	-r				Revoke certificate
 	-F				Fetch certificate
 	-m				Check the private key and certificate match
+	-P				Extract public key from certificate
+	-L				Get CRL (Certificate Revocation List) list for specified certificate
 
 
-EXAMPLE:
+EXAMPLES:
 	./crt_manager.sh -r certificateExample.crt
-		Enter the path of certificate you want to revoke.
+		Enter the path to the certificate that you want to revoke, only if your certificate was issued by your CA server.
 
 	./crt_manager.sh -F example.com:443"
 		Specify the target in format host:port to fetch the SSL/TLS certificate from a remote host.
 
 EOF
+
 }
 
 generate_PK()
@@ -51,7 +54,7 @@ generate_PK()
 				openssl genrsa -out $pk $bit 2>/dev/null
 				break
 			else
-				echo -e "\e[31mERROR:\e[0m Private key must be 2048 or 4096 bits! "
+				echo -e "\e[31mERROR:\e[0m Private key must be 2048 or 4096 bits!"
 				exit 22
 			fi
 		done
@@ -64,16 +67,18 @@ generate_PK()
 generate_CSR()
 {
 	#Edit openssl.cnf file
-        read -p "Provide the path to the openssl configuration file (openssl.cnf): " conf
-        if test -f $conf  
+	echo "Provide the path to the openssl configuration file (openssl.cnf)"
+	echo "only if you have CA server previously created. If you don't"
+	read -p "specify path default openssl config file will be used: " conf
+	if [ ! -n $conf ]
         then
 		read -p "Provide the path to the to private key: " pk
         	if test -f "$pk"
 		then
 			read -p "Enter the destination path for storing the csr : " csr
-			if [ -n "$csr"]
+			if [ -n "$csr" ]
 			then
-				openssl req -config $conf -new -sha256 -key $pk -out $csr | 2>/dev/null
+				openssl req -config $conf -new -sha256 -key $pk -out $csr
 			else
 		                echo -e "\e[31mERROR\e[0m: The name of csr can't be empty string!"
                 		exit 33
@@ -83,12 +88,25 @@ generate_CSR()
 			exit  32
 		fi
 	else
-		echo -e "\e[31mERROR:\e[0m Configuration filed doesn't exist on specified path!"
-		exit 31
+		read -p "Provide the path to the to private key: " pk
+                if test -f "$pk"
+                then
+                        read -p "Enter the destination path for storing the csr : " csr
+                        if [ -n "$csr" ]
+                        then
+                                openssl req -new -sha256 -key $pk -out $csr
+                        else
+                                echo -e "\e[31mERROR\e[0m: The name of csr can't be empty string!"
+                                exit 33
+                        fi
+                else
+                        echo -e "\e[31mERROR:\e[0m Private key doesn't exist on specified path!"
+                        exit  32
+                fi
 	fi
 }
 
-create_CERT()
+create_cert()
 {
 	#Check if exist intermediate private key on the path in openssl.cnf
         read -p "Provide the path to the openssl configuration file (openssl.cnf): " conf
@@ -113,7 +131,7 @@ create_CERT()
 				echo -e "\e[31mERROR:\e[0m Certificate validity period must be positive number!"
 				exit 43
 			fi
-		else 
+		else
 			echo -e "\e[31mERROR:\e[0m Extension doesn't exist or currently not supported!"
 			exit 42
 		fi
@@ -126,7 +144,7 @@ create_CERT()
 verify()
 {
 	echo -e "\nVerify by selecting one of the following options in  brackets:"
-	echo -e " (s)   csr \n (c)   certificate \n (p)   private key \n (f)   pfx certificate"
+	echo -e " (s)   csr \n (c)   certificate \n (p)   private key \n (f)   pfx certificate \n (d) DER certificate"
 	read -p "Select option: " opt
 	case $opt in
 		s)	# Verify csr
@@ -136,6 +154,7 @@ verify()
 				openssl req -text -noout -verify -in $csr
 			else
 				echo -e "\e[31mERROR:\e[0m Csr doesn't exist on specified path!"
+				exit 52
 			fi
 			;;
 		c)	# Verify certificate
@@ -145,6 +164,7 @@ verify()
 				openssl x509 -text -noout -in $crt
 			else
 				echo -e "\e[31mERROR:\e[0m Certificate doesn't exist on specified path!"
+				exit 53
 			fi
 			;;
 		p)	# Verify private key 
@@ -154,15 +174,27 @@ verify()
 				openssl rsa -check -in $pk
 			else
 				echo -e "\e[31mERROR:\e[0m Private key doesn't exist on specified path!"
+				exit 54
 			fi
 			;;
 		f)	# Verify pfx certificate
-			read -p "Provide the path to the pfx certificate: " pfx
+			read -p "Provide the path to the pfx (PKCS12) certificate: " pfx
 			if test -f $pfx
 			then
 				openssl pkcs12 -info -in $pfx
 			else
 				echo -e "\e[31mERROR:\e[0m Pfx certificate doesn't exist on specified path!"
+				exit 55
+			fi
+			;;
+		d)	# Verify der certificate
+			read -p "Provide the path to the DER certificates: " der
+			if test -f "$der"
+			then
+				openssl x509 -inform der -in "$der" -text -noout
+			else
+				echo -e "\e[31mERROR:\e[0m Certificate doesn't exist on specified path!"
+				exit 56
 			fi
 			;;
 		\?)	# Nevalidna opcija
@@ -180,19 +212,19 @@ convert()
 	echo -e "  PKCS#12 (.pfx) 	->	PEM		(3)"
 	echo -e "  PEM			-> 	PKCS#12 (.pfx)	(4)"
 	read -p "Enter number: " num
-	while [[ 1 ]]
-	do
-		if [[ $num>=1 ]] && [[ $num<=4 ]]
-		then
-			break
-		else
-			echo -e "\e[31mERROR:\e[0m Invalide number"
-			exit 61
-		fi
-	done
+#	while [[ 1 ]]
+#	do
+#		if [[ $num>=1 ]] && [[ $num<=4 ]]
+#		then
+#			break
+#		else
+#			echo -e "\e[31mERROR:\e[0m Invalide number"
+#			exit 61
+#		fi
+#	done
 	case $num in
 		1)	# DER -> PEM
-			read -p "Provide the path in DER format: " cert
+			read -p "Provide the path to the certificate in DER format: " cert
 			if test -f $cert
 			then
 				if [[ $cert==*.der ]]
@@ -212,14 +244,46 @@ convert()
 			fi
 			;;
 		2)	# PEM -> DER
-			read -p "Unesite sertifikat u PEM formatu: " cert
+			read -p "Provide the path to the certificate in PEM format: " cert
 			if test -f $cert
 			then
 				cert_der=$cert'.der'
 				openssl x509 -outform DER -in $cert -out $cert_der
 			else
 				echo -e "\e[31mERROR:\e[0m Certificate doesn't exist on specified path!"
-				exit 73
+				exit 74
+			fi
+			;;
+		3)	# PFX -> PEM
+			read -p "Provide the path to the certificate in PFX format: " cert
+			if test -f "$cert"
+			then
+				openssl pkcs12 -in "$cert" -out "$cert.pem" -nodes
+			else
+				echo -e "\e[31mERROR\e[0m: Certificate doesn't exist on specified path!"
+			fi
+			;;
+		4)	# PEM -> PFX
+			read -p "Provide the path to the certificate in PEM format: " cert
+			if test -f "$cert"
+			then
+				read -p "Provide path to the coresponding private key: " pk
+				if test -f "$pk"
+				then
+					if [[ $(openssl pkey -in $pk -noout | openssl md5)==$(openssl x509 -noout  -in $cert | openssl md5) ]]
+					then
+						openssl pkcs12 -export -out "$cert.pfx" -inkey "$pk" -in "$cert"
+					else
+						echo -e "\e[31mERROR\e[0m: Private key and certificate don't match!"
+						exit 77
+					fi
+				else
+					echo -e "\e[31mERROR\e[0m: Private key doesn't exist on specified path!"
+					exit 75
+				fi
+			else
+				echo -e "\e[31mERROR\e[0m: Certificate doesn't exist on specified path!"
+				exit 76
 			fi
 			;;
 		\?)	# Invalid option
@@ -227,10 +291,24 @@ convert()
 			exit 71
 	esac
 }
+
 #check if arg empty
 revoke()
 {
-	openssl ca -config /home/bogdan/PROJECT/opensslIntermediateCA.cnf -revoke $OPTARG 
+	read -p "Provide the path to openssl.cnf configuration file: " opn
+	if test -f "$opn"
+	then
+		if test -f $OPTARG
+		then
+			openssl ca -config "$opn" -revoke $OPTARG 
+		else
+			echo -e "\e[31mERROR\e[0m: Certificate doesn't exist on specified path!"
+			exit 81
+		fi
+	else
+		echo -e "\e[31mERROR\e[0m: Configuration file doesn't exist on specified path!"
+		exit 82
+	fi
 }
 
 fetch()
@@ -246,7 +324,7 @@ fetch()
 	fi
 }
 
-check()
+match()
 {
 	read -p "Provide the path to the private key: " pk
 	if test -f $pk
@@ -263,21 +341,56 @@ check()
 				echo -e "\e[31mNOT OK:\e[0m Certificate and private key don't match!"
 			fi
 		else
-			 	echo -e "\e[31mERROR:\e[0m Certificate doe private key don't match!"
-			exit 82
+			 	echo -e "\e[31mERROR:\e[0m Certificate and private key don't match!"
+			exit 92
 		fi
 	else
-		 echo "GRESKA: privatni kljuc ne postoji na zadatoj putanji!"
-		exit 81
+		 echo -e "\e[31mERROR\e[0m: Private key doesn't exist on specified path!"
+		exit 91
 	fi
 }
 
+extract_pub()
+{
+	read -p "Provide the path to the certificate: " cert
+	if test -f $pfx
+	then
+		read -p "Specify the path where you like to store Public key: " path
+		if test -d $(dirname "$dir")
+		then
+			openssl x509 -in "$cert" -pubkey -noout > "$cert.pub.key"
+		else
+			echo -e "\e[31mERROR\e[0m: Specified path doesn't exist!"
+		fi
+	else
+		echo -e "\e[31mERROR:\e[0m Pfx certificate doesn't exist on specified path!"
+		exit 101
+	fi
+
+}
+
+get_crl()
+{
+	if test -f $OPTARG
+	then
+		openssl s_client -showcerts -verify 5 -connect "$OPTARG":443 < /dev/null | awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/{ if(/BEGIN CERTIFICATE/){a++}; if(a<=5) print}' > chain-"$OPTARG".pem 
+		t=$(openssl x509 -in $OPTARG -text -noout | grep "CRL Distribution" -A 5 | grep URI | cut -f 2,3 -d ":")
+		wget $t
+		openssl crl -inform DER -in $t -outform PEM -out $t.pem
+		cat chain-"$OPTARG".pem $t > chain-crl.pem
+		openssl verify -crl_check -CAfile $t chain-"$OPTARG".pem
+	else
+		echo -e "\e[31mERROR\e[0m: Certificate doesn't exist on specified path!"
+		exit 111
+	fi
+
+}
 
 #########################################
 # Main program				#
 #########################################
 
-while getopts ":hpCcvxr:F:m" opt; do
+while getopts ":hpCcvxr:F:mPL:" opt; do
 	case $opt in
 		h)	# display help
 		  	Help
@@ -289,7 +402,7 @@ while getopts ":hpCcvxr:F:m" opt; do
 			generate_CSR
 			;;
 		c)  	# Issue certificate
-			create_CERT
+			create_cert
 			;;
 		v)	# Verify
 			verify
@@ -304,7 +417,13 @@ while getopts ":hpCcvxr:F:m" opt; do
 			fetch
 			;;
 		m)	# Check pk cert match
-			check
+			match
+			;;
+		P)	# Extract pub key
+			extract_pub
+			;;
+		L)	# Get CRL
+			get_crl
 			;;
 		\?) 	# invalide option
 		    	echo "Error: Invalid option"
