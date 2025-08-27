@@ -65,19 +65,3 @@ crt_manager/
 └── isExpire.sh 
 ```
 
-## 🚀 Features
-
-### 1. Certificate Authority Management
-
-
-
-
-
-- **Create Root CA**
-**Command:**
-```bash
-./ssl-toolkit.sh create-ca "My Root CA"
-**Command**
-'''
-```
-
