@@ -88,6 +88,7 @@ generate_CSR()
 			exit  32
 		fi
 	else
+		echo "You don't provide path to openssl.cnf config file, so default OpenSSL file will be used"
 		read -p "Provide the path to the to private key: " pk
                 if test -f "$pk"
                 then
@@ -112,6 +113,7 @@ create_cert()
         read -p "Provide the path to the openssl configuration file (openssl.cnf): " conf
         if test -f $conf
 	then
+		echo "Do you need certificate for server or client?"
 		read -p "Extension in openssl.cnf file (server_cert/usr_cert): " ext
 		if [[ $ext='server_cert' ]] || [[ $ext='usr_cert' ]]
         	then
@@ -212,16 +214,6 @@ convert()
 	echo -e "  PKCS#12 (.pfx) 	->	PEM		(3)"
 	echo -e "  PEM			-> 	PKCS#12 (.pfx)	(4)"
 	read -p "Enter number: " num
-#	while [[ 1 ]]
-#	do
-#		if [[ $num>=1 ]] && [[ $num<=4 ]]
-#		then
-#			break
-#		else
-#			echo -e "\e[31mERROR:\e[0m Invalide number"
-#			exit 61
-#		fi
-#	done
 	case $num in
 		1)	# DER -> PEM
 			read -p "Provide the path to the certificate in DER format: " cert

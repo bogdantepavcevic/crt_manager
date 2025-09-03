@@ -6,7 +6,7 @@ current_dir=$(pwd)
 dpkg -s openssl &> /dev/null
 if [ $? == 0 ]
 then
-        echo -e "\n\e[32mOK\e[0m: openssl is install"; 
+        echo -e "\n\e[32mOK\e[0m: openssl is install";
 else
         echo -e "\e[31mERROR\e[0m: openssl isn't installed. Install openssl and try again."
         exit 10
@@ -26,8 +26,8 @@ fi
 
 	echo "Please select the type of Certificate Authority (CA) to create. If you select first option,"
 	echo "you can create secure and robust multi-tier PKI environment using both a Root and one or"
-	echo "more Intermediate CAs. Alternatlively, the  Root CA alone can be used as a simple Self-signed" 
-	echo "CA for lab and testing purposes. The second option creates an Intermediate CA, but only if" 
+	echo "more Intermediate CAs. Alternatlively, the  Root CA alone can be used as a simple Self-signed"
+	echo "CA for lab and testing purposes. The second option creates an Intermediate CA, but only if"
 	echo "you already have a Root CA in place."
 	echo "(1)   Root CA"
 	echo "(2)   Intermediate CA"
