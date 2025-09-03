@@ -9,12 +9,9 @@ for c in $(cat "$current_dir"/certsList.txt); do
 	A=$(($(date -d "$T" +%s) - $(date -d "$(date)" +%s)))
 	if ((A/60/60/24 < 10))
 	then
-		echo -e "WARNING: Certificate for $(echo $c | cut -f 1 -d ":") expire in $((A/60/60/24)) days" >> "$current_dir"/tmpMail.txt
+		echo -e "WARNING: Certificate for $(echo $c | cut -f 1 -d ":") expire in $((A/60/60/24)) days"
 	fi
 done
 
-cat "$current_dir"/tmpMail.txt
-#cat "$current_dir"/tmpMail.txt | mail -s "Certificate expire soon" example@gmail.com
-#rm "$current_dir"/tmpMail.txt
 
 

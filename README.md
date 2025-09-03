@@ -22,7 +22,7 @@ A Bash-based SSL/TLS management toolkit that streamlines the entire certificate 
     - [2. CRT_MANAGER](#2-crt_manager)
         - [Features](#features-1)
         - [Usage](#usage)
-
+    - [3. Is Expired](#3-is-expired)
 
 
 # **Features**
@@ -79,8 +79,6 @@ crt_manager/
 ├── crt_manager.sh
 └── isExpire.sh 
 ```
-## Documentation
-**Still in progress...**
 
 # 🚀 **Documentation**
 
@@ -320,3 +318,24 @@ If you get this OK message, Root CA is successfully created.
 
 **Still in progress..**
 
+## **3. Is Expired**
+
+
+The script isExpire.sh (located in the root directory of the toolkit) is used to check certificate expiration.
+
+It reads a list of resources (e.g., example.com:443) from the certsList.txt file, which you should customize to your needs. The script then iterates through each resource and checks whether its SSL/TLS certificate will expire within the next 10 days. The results are printed to standard output.
+
+``` bash
+chmod +x isExpire.sh
+./isExpire.sh
+```
+
+OUTPUT:
+``` bash
+WARNING: Certificate for google.com expire in 4 days
+WARNING: Certificate for ibm.com expire in 7 days
+```
+
+
+You can easily integrate this script with a mail server to send automatic email warnings.
+This feature will be covered in the next version of the toolkit...
